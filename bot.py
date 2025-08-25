@@ -1,10 +1,10 @@
 import random
 import subprocess
 import os
-import discord
+import discord, os
 from discord.ext import commands, tasks
 import asyncio
-from discord import app_commands
+from discord import app_commands, ui
 import psutil
 from datetime import datetime
 import re
@@ -1454,9 +1454,6 @@ async def ping_command(interaction: discord.Interaction):
             await interaction.response.send_message("❌ An error occurred while processing your request.", ephemeral=True)
         except:
             pass
-
-from discord import app_commands, ui
-import discord, os
 
 class ManageVPSView(ui.View):
     def __init__(self, user: str, container_id: str, ssh_command: str):
