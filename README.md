@@ -19,9 +19,9 @@ Simple docker build scripts for multiple Linux-based VPS containers.
 
 ## Installation
 
-- bash <(curl -fsSL https://raw.githubusercontent.com/hycroedev/vps-deploy-bot/main/install.sh)
+- bash <(curl -fsSL https://raw.githubusercontent.com/Ankitboss7/fn/main/install.sh)
 
 ## Credits
 
-- Thanks ,Niwely
-- made by hycroedev
+- Thanks ,Gh
+- made by Gamerzhacker
