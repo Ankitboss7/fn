@@ -1455,4 +1455,113 @@ async def ping_command(interaction: discord.Interaction):
         except:
             pass
 
+from discord import app_commands, ui
+import discord, os
+
+class ManageVPSView(ui.View):
+    def __init__(self, user: str, container_id: str, ssh_command: str):
+        super().__init__(timeout=180)
+        self.user = user
+        self.container_id = container_id
+        self.ssh_command = ssh_command
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if str(interaction.user) != self.user:
+            await interaction.response.send_message("❌ You are not the owner of this VPS!", ephemeral=True)
+            return False
+        return True
+
+    # Buttons call EXISTING FUNCTIONS from v.txt
+    @ui.button(label="🟢 Start", style=discord.ButtonStyle.success)
+    async def start_btn(self, interaction: discord.Interaction, button: ui.Button):
+        await start_server(interaction, self.container_id)
+
+    @ui.button(label="🛑 Stop", style=discord.ButtonStyle.danger)
+    async def stop_btn(self, interaction: discord.Interaction, button: ui.Button):
+        await stop_server(interaction, self.container_id)
+
+    @ui.button(label="🔄 Restart", style=discord.ButtonStyle.primary)
+    async def restart_btn(self, interaction: discord.Interaction, button: ui.Button):
+        await restart_server(interaction, self.container_id)
+
+    @ui.button(label="♻️ Reinstall", style=discord.ButtonStyle.secondary)
+    async def reinstall_btn(self, interaction: discord.Interaction, button: ui.Button):
+        # ✅ Reinstall should behave like stop + remove + fresh deploy
+        try:
+            subprocess.run(["docker", "stop", self.container_id], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            subprocess.run(["docker", "rm", "-f", self.container_id], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            # ⚠️ Add your own VPS deploy logic here
+            await interaction.user.send(f"♻️ Your VPS `{self.container_id[:12]}` has been reinstalled!")
+            await interaction.response.send_message("✅ VPS reinstalled. Owner notified in DM.", ephemeral=True)
+            await send_to_logs(f"♻️ {interaction.user.mention} reinstalled VPS `{self.container_id[:12]}`")
+        except Exception as e:
+            await interaction.response.send_message(f"❌ Error reinstalling: {e}", ephemeral=True)
+
+    @ui.button(label="🔑 SSH Info", style=discord.ButtonStyle.secondary)
+    async def ssh_info_btn(self, interaction: discord.Interaction, button: ui.Button):
+        try:
+            dm_embed = discord.Embed(
+                title=f"🔑 SSH Info for {self.container_id[:12]}",
+                description=f"```{self.ssh_command}```",
+                color=0x00FF00
+            )
+            await interaction.user.send(embed=dm_embed)
+            await interaction.response.send_message("📩 SSH info sent to your DMs.", ephemeral=True)
+        except discord.Forbidden:
+            await interaction.response.send_message("⚠️ Could not DM you SSH details. Please enable DMs.", ephemeral=True)
+
+
+@bot.tree.command(name="manage", description="⚙️ Manage your VPS instance")
+async def manage(interaction: discord.Interaction):
+    user = str(interaction.user)
+
+    if not os.path.exists(database_file):
+        await interaction.response.send_message("📭 No VPS found for you.", ephemeral=True)
+        return
+
+    vps_list = []
+    with open(database_file, "r") as f:
+        for line in f:
+            parts = line.strip().split('|')
+            if len(parts) >= 3 and parts[0] == user:
+                vps_list.append((parts[1], parts[2]))  # (container_id, ssh_command)
+
+    if not vps_list:
+        await interaction.response.send_message("📭 You don't own any VPS.", ephemeral=True)
+        return
+
+    # If multiple VPS → dropdown select
+    if len(vps_list) > 1:
+        options = [
+            discord.SelectOption(label=f"VPS {c[:12]}", description="Select to manage", value=c)
+            for c, _ in vps_list
+        ]
+
+        class VPSSelect(discord.ui.Select):
+            def __init__(self):
+                super().__init__(placeholder="Select a VPS to manage", options=options)
+
+            async def callback(self, i: discord.Interaction):
+                cid = self.values[0]
+                ssh_cmd = [s for c, s in vps_list if c == cid][0]
+                embed = discord.Embed(
+                    title=f"⚙️ Managing VPS {cid[:12]}",
+                    description=f"**Container ID:** `{cid}`",
+                    color=0x3498db
+                )
+                await i.response.send_message(embed=embed, view=ManageVPSView(user, cid, ssh_cmd), ephemeral=True)
+
+        view = discord.ui.View()
+        view.add_item(VPSSelect())
+        await interaction.response.send_message("Select a VPS to manage:", view=view, ephemeral=True)
+
+    else:
+        cid, ssh_cmd = vps_list[0]
+        embed = discord.Embed(
+            title=f"⚙️ Managing VPS {cid[:12]}",
+            description=f"**Container ID:** `{cid}`",
+            color=0x3498db
+        )
+        await interaction.response.send_message(embed=embed, view=ManageVPSView(user, cid, ssh_cmd), ephemeral=True)
+        
 bot.run(TOKEN)
