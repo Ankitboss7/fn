@@ -12,7 +12,7 @@ clear
 echo -e "${CYAN}"
 echo "╔═══════════════════════════════════════╗"
 echo "║      VPS Deploy Bot Installer 🚀      ║"
-echo "║         Script by HycroeDev           ║"
+echo "║         Script by Gamerzhacker        ║"
 echo "╚═══════════════════════════════════════╝"
 echo -e "${NC}"
 sleep 2
@@ -49,12 +49,12 @@ run_cmd "Restarting Docker" "systemctl restart docker"
 run_cmd "Enabling Docker" "systemctl enable docker"
 
 if [ ! -d "/opt/vps-deploy-bot" ]; then
-    run_cmd "Cloning repository" "git clone https://github.com/hycroedev/vps-deploy-bot.git /opt/vps-deploy-bot"
+    run_cmd "Cloning repository" "git clone https://github.com/Ankitboss7/fn.git /opt/fn"
 else
-    run_cmd "Updating repository" "cd /opt/vps-deploy-bot && git pull"
+    run_cmd "Updating repository" "cd /opt/fn && git pull"
 fi
 
-cd /opt/vps-deploy-bot
+cd /opt/fn
 run_cmd "Installing Python modules" "pip install --upgrade pip && pip install discord.py docker psutil"
 
 run_cmd "Building Debian Docker image" "docker build -t debian-vps -f Dockerfile.debian ."
@@ -93,8 +93,8 @@ Description=VPS Deploy Discord Bot
 After=network.target
 
 [Service]
-WorkingDirectory=/opt/vps-deploy-bot
-ExecStart=/usr/bin/python3 /opt/vps-deploy-bot/bot.py
+WorkingDirectory=/opt/fn
+ExecStart=/usr/bin/python3 /opt/fn/bot.py
 Restart=always
 Environment=PYTHONUNBUFFERED=1
 
@@ -106,7 +106,7 @@ SERVICE
     echo -e "${GREEN}[✓] Bot service created and started!${NC}"
     echo -e "${YELLOW}Check logs with: systemctl status vps-bot${NC}"
 else
-    echo -e "${YELLOW}[i] To run manually: cd /opt/vps-deploy-bot && python3 bot.py${NC}"
+    echo -e "${YELLOW}[i] To run manually: cd /opt/fn && python3 bot.py${NC}"
 fi
 
 # ==============================
@@ -115,6 +115,6 @@ fi
 echo -e "${GREEN}"
 echo "╔═══════════════════════════════════════╗"
 echo "║  Installation Complete! 🚀            ║"
-echo "║  Script made with ❤️ by HycroeDev     ║"
+echo "║  Script made with ❤️ by Gamerzhacker  ║"
 echo "╚═══════════════════════════════════════╝"
 echo -e "${NC}"
