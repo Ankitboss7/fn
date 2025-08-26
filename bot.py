@@ -1681,4 +1681,177 @@ async def serverinfo(interaction: discord.Interaction, container_id: str):
     emb.add_field(name="SSH", value=f"```{ssh}```", inline=False)
     await interaction.response.send_message(embed=emb)
 
+# ================= COLORS / ANIMATIONS ==================
+EMBED_COLOR = 0x3498db
+SUCCESS_ANIMATION = ["✅", "✔️", "🟢"]
+ERROR_ANIMATION = ["❌", "⚠️", "🚫"]
+LOADING_ANIMATION = ["⏳", "🔄", "⌛"]
+
+database_file = "database.txt"
+
+# ================= ADMIN CHECK FUNCTION ==================
+async def is_admin_role_only(interaction: discord.Interaction):
+    admin_role_ids = [1405943396346101820,1409136997347622912]  # <- apne admin role IDs yahan daalo
+    return any(role.id in admin_role_ids for role in interaction.user.roles)
+
+# ================= DATABASE HELPERS ==================
+def remove_from_database(ssh_cmd):
+    if not os.path.exists(database_file):
+        return
+    with open(database_file, "r") as f:
+        lines = f.readlines()
+    with open(database_file, "w") as f:
+        for line in lines:
+            if ssh_cmd not in line:
+                f.write(line)
+
+def add_to_database(user, container_id, ssh_cmd):
+    with open(database_file, "a") as f:
+        f.write(f"{user}|{container_id}|{ssh_cmd}\n")
+
+# ================= BUTTONS ==================
+class ConfirmAction(discord.ui.View):
+    def __init__(self, action, interaction, container_id, target_user):
+        super().__init__(timeout=30)
+        self.action = action
+        self.interaction = interaction
+        self.container_id = container_id
+        self.target_user = target_user
+
+    @discord.ui.button(label="✅ Yes", style=discord.ButtonStyle.success)
+    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.action == "start":
+            await start_server(self.interaction, self.container_id, self.target_user)
+        elif self.action == "stop":
+            await stop_server(self.interaction, self.container_id, self.target_user)
+        self.stop()
+
+    @discord.ui.button(label="❌ No", style=discord.ButtonStyle.danger)
+    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
+        embed = discord.Embed(
+            title="🚫 Cancelled",
+            description="Action has been cancelled.",
+            color=0xFF0000
+        )
+        await interaction.response.edit_message(embed=embed, view=None)
+        self.stop()
+
+# ================= UNSUSPEND VPS ==================
+@bot.tree.command(name="unsuspendvps", description="🟢 Unsuspend a VPS (Admin Only)")
+@app_commands.describe(container_id="Your instance ID (first 4+ characters)", usertag="User who owns the VPS")
+async def unsuspendvps(interaction: discord.Interaction, container_id: str, usertag: discord.User):
+    if not await is_admin_role_only(interaction):
+        embed = discord.Embed(
+            title="🚫 Permission Denied",
+            description="This command is restricted to administrators only.",
+            color=0xFF0000
+        )
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+        return
+
+    embed = discord.Embed(
+        title="⚠️ Confirm Unsuspend",
+        description=f"Are you sure you want to **unsuspend** VPS `{container_id}` for {usertag.mention}?",
+        color=EMBED_COLOR
+    )
+    await interaction.response.send_message(embed=embed, view=ConfirmAction("start", interaction, container_id, usertag))
+
+# ================= SUSPEND VPS ==================
+@bot.tree.command(name="suspendvps", description="🛑 Suspend a VPS (Admin Only)")
+@app_commands.describe(container_id="Your instance ID (first 4+ characters)", usertag="User who owns the VPS")
+async def suspendvps(interaction: discord.Interaction, container_id: str, usertag: discord.User):
+    if not await is_admin_role_only(interaction):
+        embed = discord.Embed(
+            title="🚫 Permission Denied",
+            description="This command is restricted to administrators only.",
+            color=0xFF0000
+        )
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+        return
+
+    embed = discord.Embed(
+        title="⚠️ Confirm Suspend",
+        description=f"Are you sure you want to **suspend** VPS `{container_id}` for {usertag.mention}?",
+        color=EMBED_COLOR
+    )
+    await interaction.response.send_message(embed=embed, view=ConfirmAction("stop", interaction, container_id, usertag))
+
+
+# ================= START SERVER (UNSUSPEND) ==================
+async def start_server(interaction: discord.Interaction, container_id: str, target_user: discord.User):
+    try:
+        container_info = None
+        ssh_command = None
+
+        if not os.path.exists(database_file):
+            await interaction.followup.send("📭 No instances found.", ephemeral=True)
+            return
+
+        with open(database_file, 'r') as f:
+            for line in f:
+                parts = line.strip().split('|')
+                if len(parts) >= 3 and container_id in parts[1]:
+                    container_info = parts[1]
+                    ssh_command = parts[2]
+                    break
+
+        if not container_info:
+            await interaction.followup.send("🔍 Instance not found.", ephemeral=True)
+            return
+
+        subprocess.run(["docker", "start", container_info], check=True)
+        await interaction.followup.send(f"🟢 VPS `{container_info[:12]}` has been unsuspended for {target_user.mention}!")
+
+        # ✅ DM user
+        try:
+            dm_embed = discord.Embed(
+                title="🟢 VPS Unsuspended",
+                description=f"✅ Your VPS `{container_info[:12]}` has been unsuspended by admin.",
+                color=0x00FF00
+            )
+            await target_user.send(embed=dm_embed)
+        except discord.Forbidden:
+            pass
+
+    except Exception as e:
+        await interaction.followup.send(f"❌ Error unsuspending VPS: {e}", ephemeral=True)
+
+
+# ================= STOP SERVER (SUSPEND) ==================
+async def stop_server(interaction: discord.Interaction, container_id: str, target_user: discord.User):
+    try:
+        container_info = None
+
+        if not os.path.exists(database_file):
+            await interaction.followup.send("📭 No instances found.", ephemeral=True)
+            return
+
+        with open(database_file, 'r') as f:
+            for line in f:
+                parts = line.strip().split('|')
+                if len(parts) >= 3 and container_id in parts[1]:
+                    container_info = parts[1]
+                    break
+
+        if not container_info:
+            await interaction.followup.send("🔍 Instance not found.", ephemeral=True)
+            return
+
+        subprocess.run(["docker", "stop", container_info], check=True)
+        await interaction.followup.send(f"🛑 VPS `{container_info[:12]}` has been suspended for {target_user.mention}!")
+
+        # ✅ DM user
+        try:
+            dm_embed = discord.Embed(
+                title="🛑 VPS Suspended",
+                description=f"⚠️ Your VPS `{container_info[:12]}` has been suspended by admin.",
+                color=0xFF0000
+            )
+            await target_user.send(embed=dm_embed)
+        except discord.Forbidden:
+            pass
+
+    except Exception as e:
+        await interaction.followup.send(f"❌ Error suspending VPS: {e}", ephemeral=True)
+
 bot.run(TOKEN)
