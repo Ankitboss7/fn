@@ -1584,19 +1584,67 @@ async def manage(interaction: discord.Interaction):
         emb = discord.Embed(title=f"⚙️ Manage VPS {cid[:12]}", description=f"Container ID: `{cid}`", color=EMBED_COLOR)
         await interaction.response.send_message(embed=emb, view=ManageVPSView(user, cid, ssh_cmd), ephemeral=True)
 
-# ────────────────────────────── EXTRA COMMANDS ──────────────────────────────
-@bot.tree.command(name="sendvps", description="📩 Send VPS details (Admin only)")
-async def sendvps(interaction: discord.Interaction, user: discord.User):
-    if not is_admin(interaction.user):
-        await interaction.response.send_message("❌ Admin only", ephemeral=True); return
-    emb = discord.Embed(title="📦 VPS Created Successfully ✅", color=0x3498db)
-    emb.add_field(name="IP", value="1.2.3.4", inline=True)
-    emb.add_field(name="Port", value="22", inline=True)
-    emb.add_field(name="User", value="root", inline=True)
-    emb.add_field(name="Pass", value="changeme", inline=True)
-    await user.send(embed=emb)
-    await interaction.response.send_message(f"✅ Sent VPS details to {user.mention}", ephemeral=True)
 
+@bot.tree.command(name="sendvps", description="👑 Admin: Send VPS details to a user via DM")
+@app_commands.describe(
+    ram="RAM in GB",
+    cpu="CPU cores",
+    ip="IP address",
+    port="Port number",
+    password="VPS password",
+    fullcombo="Full combo format: user@ip:port:pass",
+    user="Select the user to send VPS details"
+)
+async def sendvps(
+    interaction: discord.Interaction,
+    ram: str,
+    cpu: str,
+    ip: str,
+    port: str,
+    password: str,
+    fullcombo: str,
+    user: discord.User
+):
+    # Check admin permissions
+    if interaction.user.id not in ADMIN_IDS:
+        embed = discord.Embed(
+            title="❌ Access Denied",
+            description="Only Gamerzhacker admins can use this command.",
+            color=0xff0000
+        )
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+        return
+
+    # Create the VPS detail embed
+    embed = discord.Embed(
+        title="✅ VPS Created Successfully!",
+        description="Here are your VPS details. Please **save them securely.**",
+        color=0x2400ff
+    )
+    embed.add_field(name="🌐 IP", value=ip, inline=True)
+    embed.add_field(name="🔌 Port", value=port, inline=True)
+    embed.add_field(name="🔒 Password", value=password, inline=True)
+    embed.add_field(name="🧬 Full Combo", value=f"```{fullcombo}```", inline=False)
+    embed.add_field(name="💾 RAM", value=f"{ram} GB", inline=True)
+    embed.add_field(name="🔥 CPU", value=f"{cpu} cores", inline=True)
+    embed.set_footer(text="🔐 Safe your details | Powered by Fluid Node")
+
+    try:
+        await user.send(embed=embed)
+        success = discord.Embed(
+            title="📨 DM Sent",
+            description=f"Successfully sent VPS details to {user.mention}.",
+            color=0x00ff00
+        )
+        await interaction.response.send_message(embed=success)
+    except discord.Forbidden:
+        error = discord.Embed(
+            title="❌ DM Failed",
+            description=f"Could not send DM to {user.mention}. They may have DMs disabled.",
+            color=0xff0000
+        )
+        await interaction.response.send_message(embed=error)
+        
 @bot.tree.command(name="plans", description="📜 Show VPS Plans")
 async def plans(interaction: discord.Interaction):
     emb = discord.Embed(title="💡 VPS Plans", color=0x7289da)
