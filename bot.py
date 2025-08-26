@@ -1509,16 +1509,7 @@ class ManageVPSView(ui.View):
     @ui.button(label="Restart", style=discord.ButtonStyle.primary)
     async def restart_btn(self, interaction: discord.Interaction, button: ui.Button):
         subprocess.run(["docker", "restart", self.container_id], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        await interaction.response.send_message(f"🔄 VPS `{self.container_id[:12]}` restarted!", ephemeral=True)
-
-    @ui.button(label="Reinstall", style=discord.ButtonStyle.secondary)
-    async def reinstall_btn(self, interaction: discord.Interaction, button: ui.Button):
-        # Example reinstall = stop + remove + deploy again
-        subprocess.run(["docker", "stop", self.container_id], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        subprocess.run(["docker", "rm", "-f", self.container_id], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        # ⚠️ Add your deployment logic here (custom image, default setup, etc.)
-        await interaction.user.send(f"♻️ Your VPS `{self.container_id[:12]}` has been reinstalled!")
-        await interaction.response.send_message("✅ Reinstall completed. VPS owner has been notified.", ephemeral=True
+        await interaction.response.send_message(f"🔄 VPS `{self.container_id[:12]}` restarted!", ephemeral=T
                                                 
     @ui.button(label="🔑 SSH Info", style=discord.ButtonStyle.secondary)
     async def ssh_info_btn(self, interaction: discord.Interaction, button: ui.Button):
