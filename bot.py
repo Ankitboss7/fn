@@ -1499,17 +1499,17 @@ class ManageVPSView(ui.View):
     @ui.button(label="Start", style=discord.ButtonStyle.success)
     async def start_btn(self, interaction: discord.Interaction, button: ui.Button):
         subprocess.run(["docker", "start", self.container_id], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        await interaction.response.send_message(f"🟢 VPS `{self.container_id[:12]}` started!", ephemeral=True)
+        await interaction.response.send_message("🟢 VPS `{self.container_id[:12]}` started!", ephemeral=True)
 
     @ui.button(label="Stop", style=discord.ButtonStyle.danger)
     async def stop_btn(self, interaction: discord.Interaction, button: ui.Button):
         subprocess.run(["docker", "stop", self.container_id], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        await interaction.response.send_message(f"🛑 VPS `{self.container_id[:12]}` stopped!", ephemeral=True)
+        await interaction.response.send_message("🛑 VPS `{self.container_id[:12]}` stopped!", ephemeral=True)
 
     @ui.button(label="Restart", style=discord.ButtonStyle.primary)
     async def restart_btn(self, interaction: discord.Interaction, button: ui.Button):
         subprocess.run(["docker", "restart", self.container_id], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        await interaction.response.send_message(f"🔄 VPS `{self.container_id[:12]}` restarted!", ephemeral=T
+        await interaction.response.send_message("🔄 VPS `{self.container_id[:12]}` restarted!", ephemeral=T
                                                 
     @ui.button(label="🔑 SSH Info", style=discord.ButtonStyle.secondary)
     async def ssh_info_btn(self, interaction: discord.Interaction, button: ui.Button):
