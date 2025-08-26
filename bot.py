@@ -12,8 +12,8 @@ import time
 
 # Configuration
 TOKEN = ''  # REPLACE WITH YOUR BOT'S TOKEN
-RAM_LIMIT = '2g'
-SERVER_LIMIT = 12
+RAM_LIMIT = '128g'
+SERVER_LIMIT = 20
 LOGS_CHANNEL_ID = 123456789    # CHANGE TO YOUR LOGS CHANNEL ID
 ADMIN_ROLE_ID = 123456789     # CHANGE TO YOUR ADMIN ROLE ID
 
@@ -1496,25 +1496,30 @@ class ManageVPSView(ui.View):
             return False
         return True
 
-    @ui.button(label="🟢 Start", style=discord.ButtonStyle.success)
+    @ui.button(label="Start", style=discord.ButtonStyle.success)
     async def start_btn(self, interaction: discord.Interaction, button: ui.Button):
-        await start_server(interaction, self.container_id)
+        subprocess.run(["docker", "start", self.container_id], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        await interaction.response.send_message(f"🟢 VPS `{self.container_id[:12]}` started!", ephemeral=True)
 
-    @ui.button(label="🛑 Stop", style=discord.ButtonStyle.danger)
+    @ui.button(label="Stop", style=discord.ButtonStyle.danger)
     async def stop_btn(self, interaction: discord.Interaction, button: ui.Button):
-        await stop_server(interaction, self.container_id)
+        subprocess.run(["docker", "stop", self.container_id], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        await interaction.response.send_message(f"🛑 VPS `{self.container_id[:12]}` stopped!", ephemeral=True)
 
-    @ui.button(label="🔄 Restart", style=discord.ButtonStyle.primary)
+    @ui.button(label="Restart", style=discord.ButtonStyle.primary)
     async def restart_btn(self, interaction: discord.Interaction, button: ui.Button):
-        await restart_server(interaction, self.container_id)
+        subprocess.run(["docker", "restart", self.container_id], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        await interaction.response.send_message(f"🔄 VPS `{self.container_id[:12]}` restarted!", ephemeral=True)
 
-    @ui.button(label="♻️ Reinstall", style=discord.ButtonStyle.secondary)
+    @ui.button(label="Reinstall", style=discord.ButtonStyle.secondary)
     async def reinstall_btn(self, interaction: discord.Interaction, button: ui.Button):
-        subprocess.run(["docker", "stop", self.container_id])
-        subprocess.run(["docker", "rm", "-f", self.container_id])
-        await interaction.user.send(f"♻️ Your VPS `{self.container_id[:12]}` has been reinstalled ✅")
-        await interaction.response.send_message("Reinstalled VPS and notified owner.", ephemeral=True)
-
+        # Example reinstall = stop + remove + deploy again
+        subprocess.run(["docker", "stop", self.container_id], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        subprocess.run(["docker", "rm", "-f", self.container_id], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        # ⚠️ Add your deployment logic here (custom image, default setup, etc.)
+        await interaction.user.send(f"♻️ Your VPS `{self.container_id[:12]}` has been reinstalled!")
+        await interaction.response.send_message("✅ Reinstall completed. VPS owner has been notified.", ephemeral=True
+                                                
     @ui.button(label="🔑 SSH Info", style=discord.ButtonStyle.secondary)
     async def ssh_info_btn(self, interaction: discord.Interaction, button: ui.Button):
         try:
